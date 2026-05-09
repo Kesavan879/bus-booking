@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Bus Booking</title>
+</head>
+
+<body>
+
+    <h1>Bus Booking System</h1>
+
+    <button onclick="loadTickets()">
+        View Tickets
+    </button>
+
+    <div id="result"></div>
+
+    <script>
+
+        async function loadTickets() {
+
+            let response =
+                await fetch("http://localhost:8085/seats");
+
+            let data = await response.json();
+
+            let output = "";
+
+            data.forEach(ticket => {
+
+                output += `
+                    <h3>${ticket.name}</h3>
+
+                    <p>Seat: ${ticket.seat_label}</p>
+
+                    <p>Location: ${ticket.location}</p>
+
+                    <p>PNR: ${ticket.pnr_no}</p>
+
+                    <hr>
+                `;
+            });
+
+            document.getElementById("result").innerHTML
+                = output;
+        }
+
+    </script>
+
+</body>
+
+</html>
