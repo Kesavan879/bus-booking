@@ -1,52 +1,305 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Bus Booking</title>
-</head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TN Express Bus Booking</title>
 
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: white;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #facc15;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #111827;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .seat {
+      padding: 20px;
+      border: 2px solid #22c55e;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      background: #052e16;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .seat.selected {
+      background: orange;
+      color: black;
+    }
+
+    .seat.booked {
+      background: red;
+      border-color: red;
+      cursor: not-allowed;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 20px;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+
+    .tickets {
+      margin-top: 30px;
+    }
+
+    .ticket {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 10px;
+      line-height: 1.8;
+    }
+
+    h2 {
+      margin-top: 30px;
+      margin-bottom: 10px;
+      color: #facc15;
+    }
+  </style>
+</head>
 <body>
 
-    <h1>Bus Booking System</h1>
+  <h1>TN Express Bus Booking</h1>
 
-    <button onclick="loadTickets()">
-        View Tickets
-    </button>
+  <div class="container">
 
-    <div id="result"></div>
+    <label>Location</label>
+    <select id="location">
+      <option>Chennai</option>
+      <option>Erode</option>
+      <option>Coimbatore</option>
+      <option>Madurai</option>
+      <option>Salem</option>
+    </select>
 
-    <script>
+    <h2>Select Seat</h2>
 
-        async function loadTickets() {
+    <div class="grid" id="seatGrid"></div>
 
-            let response =
-                await fetch("http://localhost:8085/seats");
+    <h2>Passenger Details</h2>
 
-            let data = await response.json();
+    <input type="text" id="name" placeholder="Enter Name" />
+    <input type="email" id="mail" placeholder="Enter Email" />
+    <input type="text" id="phone" placeholder="Enter Phone" />
 
-            let output = "";
+    <button onclick="bookSeat()">Book Ticket</button>
 
-            data.forEach(ticket => {
+    <div class="tickets">
+      <h2>View Tickets</h2>
+      <div id="ticketList"></div>
+    </div>
 
-                output += `
-                    <h3>${ticket.name}</h3>
+  </div>
 
-                    <p>Seat: ${ticket.seat_label}</p>
+<script>
 
-                    <p>Location: ${ticket.location}</p>
+const API = {
+  seats: "https://bus-booking-dsxy.onrender.com/seats",
+  book: "https://bus-booking-dsxy.onrender.com/book",
+  cancel: "https://bus-booking-dsxy.onrender.com/cancel"
+};
 
-                    <p>PNR: ${ticket.pnr_no}</p>
+const seats = [
+  "A","B","C","D",
+  "E","F","G","H",
+  "I","J","K","L",
+  "M","N","O","P"
+];
 
-                    <hr>
-                `;
-            });
+let selectedSeat = "";
+let bookedSeats = [];
 
-            document.getElementById("result").innerHTML
-                = output;
-        }
+async function loadSeats() {
 
-    </script>
+  try {
+
+    const res = await fetch(API.seats, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    const data = await res.json();
+
+    bookedSeats = data
+      .filter(ticket => ticket.status !== 0)
+      .map(ticket => ticket.seat_label);
+
+    renderSeats();
+    renderTickets(data);
+
+  } catch (err) {
+    alert("Failed to load seats");
+    console.log(err);
+  }
+}
+
+function renderSeats() {
+
+  const grid = document.getElementById("seatGrid");
+  grid.innerHTML = "";
+
+  seats.forEach(seat => {
+
+    const div = document.createElement("div");
+    div.className = "seat";
+    div.innerText = seat;
+
+    if (bookedSeats.includes(seat)) {
+      div.classList.add("booked");
+    }
+
+    if (selectedSeat === seat) {
+      div.classList.add("selected");
+    }
+
+    div.onclick = () => {
+
+      if (bookedSeats.includes(seat)) return;
+
+      selectedSeat = seat;
+      renderSeats();
+    };
+
+    grid.appendChild(div);
+  });
+}
+
+async function bookSeat() {
+
+  const name = document.getElementById("name").value;
+  const mail = document.getElementById("mail").value;
+  const phone = document.getElementById("phone").value;
+  const location = document.getElementById("location").value;
+
+  if (!selectedSeat) {
+    alert("Please select a seat");
+    return;
+  }
+
+  if (!name || !mail || !phone) {
+    alert("Please fill all details");
+    return;
+  }
+
+  try {
+
+    const response = await fetch(API.book, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pnr_no: Math.floor(Math.random() * 1000000),
+        name: name,
+        mail: mail,
+        phone: phone,
+        seat_label: selectedSeat,
+        location: location,
+        bus_type: "Non AC",
+        seat_type: "Normal",
+        price: 600
+      })
+    });
+
+    if (!response.ok) {
+      const txt = await response.text();
+      throw new Error(txt);
+    }
+
+    alert("Ticket booked successfully");
+
+    document.getElementById("name").value = "";
+    document.getElementById("mail").value = "";
+    document.getElementById("phone").value = "";
+
+    selectedSeat = "";
+
+    loadSeats();
+
+  } catch (err) {
+    alert("Booking failed");
+    console.log(err);
+  }
+}
+
+function renderTickets(data) {
+
+  const list = document.getElementById("ticketList");
+  list.innerHTML = "";
+
+  data.forEach(ticket => {
+
+    const div = document.createElement("div");
+
+    div.className = "ticket";
+
+    div.innerHTML = `
+      <p><b>Name:</b> ${ticket.name}</p>
+      <p><b>Seat:</b> ${ticket.seat_label}</p>
+      <p><b>Location:</b> ${ticket.location}</p>
+      <p><b>PNR:</b> ${ticket.pnr_no}</p>
+      <p><b>Status:</b> ${ticket.status === 0 ? 'Cancelled' : 'Active'}</p>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+loadSeats();
+
+</script>
 
 </body>
-
 </html>
